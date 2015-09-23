@@ -12,7 +12,9 @@
     "pex-cam": "pex-gl/pex-cam",
     "pex-color": "pex-gl/pex-color",
     "pex-context": "pex-gl/pex-context",
+    "pex-draw": "pex-gl/pex-draw",
     "pex-geom": "pex-gl/pex-geom",
+    "pex-gui": "pex-gl/pex-gui",
     "pex-io": "pex-gl/pex-io",
     "pex-math": "pex-gl/pex-math",
     "pex-sys": "pex-gl/pex-sys"
