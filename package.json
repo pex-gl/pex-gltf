@@ -9,7 +9,13 @@
     "email": "marcin.ignac@gmail.com",
     "url": "https://github.com/vorg"
   },
-  "dependencies": {},
+  "dependencies": {
+    "async": "^1.4.2",
+    "debug": "^2.2.0",
+    "iterate-object": "^1.1.0",
+    "pex-io": "pex-gl/pex-io",
+    "simple-loop": "0.0.4"
+  },
   "devDependencies": {},
   "scripts": {
     "test": "node test.js"
