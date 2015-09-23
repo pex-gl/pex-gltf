@@ -9,6 +9,9 @@
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
   "dependencies": {
+    "debug": "^2.2.0",
+    "is-browser": "^2.0.1",
+    "iterate-object": "^1.1.0",
     "pex-cam": "pex-gl/pex-cam",
     "pex-color": "pex-gl/pex-color",
     "pex-context": "pex-gl/pex-context",
