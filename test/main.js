@@ -8,6 +8,7 @@ var debug         = require('debug').enable('*');
 var log           = require('debug')('main');
 var loadGLTF      = require('../');
 var isBrowser     = require('is-browser');
+var Vec3          = require('pex-math/Vec3');
 
 
 var ASSETS_DIR    = isBrowser ? 'assets' : __dirname + '/assets';
@@ -85,11 +86,27 @@ Window.create({
 
 
         if (this.scene) {
-            var va = this.scene.meshes['LOD3spShape-lib'].primitives[0].vertexArray;
-            ctx.bindVertexArray(va);
-            ctx.drawElements(ctx.TRIANGLES, 12636, 0);
+            var scene = this.scene;
+            var meshes = scene.meshes;
+            Object.keys(meshes).forEach(function(meshName) {
+                var meshInfo = meshes[meshName];
+                meshInfo.primitives.forEach(function(primitive) {
+                    var numVerts = scene.accessors[primitive.indices].count;
+                    var positionAttrib = scene.accessors[primitive.attributes.POSITION];
+                    var minPos = positionAttrib.min;
+                    var maxPos = positionAttrib.max;
+                    var size = Vec3.sub(Vec3.copy(maxPos), minPos);
+                    var center = Vec3.scale(Vec3.add(Vec3.copy(minPos), maxPos), -0.5);
+                    var scale = Math.max(size[0], Math.max(size[1], size[2]));
+                    ctx.pushModelMatrix();
+                    ctx.scale([1/scale, 1/scale, 1/scale]);
+                    ctx.translate(center);
+                    ctx.bindVertexArray(primitive.vertexArray);
+                    ctx.drawElements(ctx.TRIANGLES, numVerts, 0);
+                    ctx.popModelMatrix();
+                })
+            })
         }
-
 
         this.gui.draw();
     }
