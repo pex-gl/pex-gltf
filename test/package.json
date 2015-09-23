@@ -1,0 +1,20 @@
+{
+  "name": "pex-gltf-test",
+  "version": "0.0.1",
+  "description": "glTF loader for pex tests",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
+  "license": "MIT",
+  "dependencies": {
+    "pex-cam": "pex-gl/pex-cam",
+    "pex-color": "pex-gl/pex-color",
+    "pex-context": "pex-gl/pex-context",
+    "pex-geom": "pex-gl/pex-geom",
+    "pex-io": "pex-gl/pex-io",
+    "pex-math": "pex-gl/pex-math",
+    "pex-sys": "pex-gl/pex-sys"
+  }
+}
