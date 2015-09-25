@@ -198,7 +198,7 @@ function handleImage(ctx, json, basePath, imageName, imageInfo, callback) {
         var url = basePath + '/' + imageInfo.uri;
         loadImage(url, function(err, img) {
             if (err) {
-                log('handleImage', e.toString());
+                log('handleImage', err.toString());
                 callback(err, null);
             }
             else {
