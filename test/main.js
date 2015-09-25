@@ -11,6 +11,8 @@ var isBrowser     = require('is-browser');
 var Vec3          = require('pex-math/Vec3');
 var iterateObject = require('iterate-object');
 var Mat4          = require('pex-math/Mat4');
+var mult44        = require('gl-mat4/multiply')
+var random        = require('pex-random');
 
 
 var ASSETS_DIR    = isBrowser ? 'assets' : __dirname + '/assets';
@@ -38,7 +40,7 @@ Window.create({
         this.gui.addHeader('Settings');
 
         this.camera  = new PerspCamera(45, this.getAspectRatio(), 0.01, 200.0);
-        this.camera.lookAt([0, 2, 2], [0, 0, 0], [0, 1, 0]);
+        this.camera.lookAt([-2, 0.5, -2], [0, 0, 0], [0, 1, 0]);
         ctx.setProjectionMatrix(this.camera.getProjectionMatrix());
         ctx.setViewMatrix(this.camera.getViewMatrix());
 
@@ -52,9 +54,16 @@ Window.create({
         this.showNormals = ctx.createProgram(this.resourcesRaw.showNormalsVert.text, this.resourcesRaw.showNormalsFrag.text);
         this.showTexCoords = ctx.createProgram(this.resourcesRaw.showTexCoordsVert.text, this.resourcesRaw.showTexCoordsFrag.text);
 
-        var file = ASSETS_DIR + '/models/duck/duck.gltf';
-        //var file = ASSETS_DIR + '/models/rambler/Rambler.gltf';
+        //var file = ASSETS_DIR + '/models/duck/duck.gltf';
+        var file = ASSETS_DIR + '/models/rambler/Rambler.gltf';
         //var file = ASSETS_DIR + '/models/SuperMurdoch/SuperMurdoch.gltf';
+        //var file = ASSETS_DIR + '/models/box/box.gltf';
+        //var file = ASSETS_DIR + '/models/wine/wine.gltf';
+        //var file = ASSETS_DIR + '/models/demo_collada_noanim/demo_collada_noanim.gltf';
+        //var file = ASSETS_DIR + '/models/beeple/BigHead.gltf';
+        //var file = ASSETS_DIR + '/models/beeple/HugePounder.gltf';
+        //var file = ASSETS_DIR + '/models/beeple/SideSmasher.gltf';
+        //var file = ASSETS_DIR + '/models/beeple/MEASURE_TWO.gltf';
         loadGLTF(ctx, file, function(err, scene) {
             if (err) {
                 log('loadGLTF done', err);
@@ -65,6 +74,7 @@ Window.create({
             this.scene = scene;
         }.bind(this));
     },
+    nodesDrawn: 0,
     draw: function() {
         var ctx = this.getContext();
 
@@ -85,59 +95,71 @@ Window.create({
         this.showNormals.setUniform('uPointSize', 20);
         //ctx.bindProgram(this.showTexCoords);
         //this.showTexCoords.setUniform('uPointSize', 20);
-        //ctx.bindProgram(this.showNormals);
+        //ctx.bindProgram(this.solidColorProgram);
         //this.solidColorProgram.setUniform('uColor', [1, 0, 0, 1]);
+        //var solidColorProgram = this.solidColorProgram;
         //this.solidColorProgram.setUniform('uPointSize', 20);
 
-        function drawMesh(meshInfo) {
+        random.seed(0);
+
+        function drawMesh(json, meshInfo) {
             meshInfo.primitives.forEach(function(primitive) {
-                var numVerts = scene.accessors[primitive.indices].count;
-                var positionAttrib = scene.accessors[primitive.attributes.POSITION];
+                var r = random.float();
+                var g = random.float();
+                var b = random.float();
+                //solidColorProgram.setUniform('uColor', [r, g, b, 1]);
+
+                var numVerts = json.accessors[primitive.indices].count;
+                var positionAttrib = json.accessors[primitive.attributes.POSITION];
                 var minPos = positionAttrib.min;
                 var maxPos = positionAttrib.max;
                 var size = Vec3.sub(Vec3.copy(maxPos), minPos);
                 var center = Vec3.scale(Vec3.add(Vec3.copy(minPos), maxPos), -0.5);
                 var scale = Math.max(size[0], Math.max(size[1], size[2]));
                 ctx.pushModelMatrix();
-                ctx.scale([1/scale, 1/scale, 1/scale]);
-                ctx.translate(center);
                 ctx.bindVertexArray(primitive.vertexArray);
                 ctx.drawElements(ctx.TRIANGLES, numVerts, 0);
                 ctx.popModelMatrix();
-            })
+            }.bind(this))
+        }
+
+        var self = this;
+
+        function drawNodes(json, nodes) {
+            nodes.forEach(function(nodeInfo) {
+                ctx.pushModelMatrix();
+                if (nodeInfo.matrix) {
+                    ctx.multMatrix(nodeInfo.matrix);
+                }
+                if (nodeInfo.rotation) {
+                    //TODO: implement quat rotation
+                    //ctx.multQuat(nodeInfo.rotation);
+                }
+                if (nodeInfo.scale) {
+                    //TODO: check scale transform orer
+                    ctx.scale(nodeInfo.scale);
+                }
+                if (nodeInfo.translation) {
+                    ctx.translate(nodeInfo.translation)
+                }
+                if (nodeInfo.meshes) {
+                    nodeInfo.meshes.forEach(function(meshId) {
+                        var meshInfo = meshes[meshId];
+                        drawMesh(json, meshInfo);
+                    });
+                }
+                if (nodeInfo.children) {
+                    drawNodes(json, nodeInfo.children);
+                }
+                ctx.popModelMatrix();
+            });
         }
 
         if (this.scene) {
-            var scene = this.scene;
-            var nodes = scene.nodes;
-            var meshes = scene.meshes;
-            iterateObject(nodes, function(nodeInfo, nodeName) {
-                var localMatrix = Mat4.create();
-                //scale44(localMatrix, localMatrix, [2, -2, 2])
-                //translate(localMatrix, localMatrix, [-2, 0, 0])
-                var matrixStack = [nodeInfo.matrix];
-                var parent = nodeInfo.parent;
-                while(parent) {
-                    if (parent.matrix) {
-                        matrixStack.unshift(parent.matrix);
-                    }
-                    parent = parent.parent;
-                }
-                //matrixStack.forEach(function(mat) {
-                //for(var i=matrixStack.length-1; i>=0; i--) {
-                for(var i=0; i<matrixStack.length; i++) {
-                    Mat4.mult(localMatrix, matrixStack[i]);
-                }
-                if (nodeInfo.meshes) {
-                    ctx.pushModelMatrix();
-                    ctx.setModelMatrix(localMatrix);
-                    nodeInfo.meshes.forEach(function(meshId) {
-                        var meshInfo = meshes[meshId];
-                        drawMesh(meshInfo);
-                    });
-                    ctx.popModelMatrix();
-                }
-            });
+            var json = this.scene;
+            var nodes = json.nodes;
+            var meshes = json.meshes;
+            drawNodes(json, json.scenes[json.scene].nodes)
         }
 
         this.gui.draw();
