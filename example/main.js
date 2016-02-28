@@ -14,8 +14,31 @@ var Mat4          = require('pex-math/Mat4');
 var mult44        = require('gl-mat4/multiply')
 var random        = require('pex-random');
 
-
 var ASSETS_DIR    = isBrowser ? 'assets' : __dirname + '/assets';
+var MODELS_DIR    = isBrowser ? 'glTF/sampleModels' : __dirname + '/glTF/sampleModels';
+
+var MODELS = [
+    '2_cylinder_engine',
+    'CesiumMan',
+    'CesiumMilkTruck',
+    'README.md',
+    'Reciprocating_Saw',
+    'RiggedFigure',
+    'RiggedSimple',
+    'box',
+    'boxAnimated',
+    'boxSemantics',
+    'boxTextured',
+    'boxWithoutIndices',
+    'brainsteam',
+    'buggy',
+    'convertAll.sh',
+    'duck',
+    'gearbox_assy',
+    'monster',
+    'vc',
+]
+
 
 Window.create({
     settings: {
@@ -32,6 +55,7 @@ Window.create({
         showTexCoordsVert : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.vert')},
         showTexCoordsFrag : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.frag')}
     },
+    selectedModel: 'duck',
     init: function() {
         var ctx = this.getContext();
         var res = this.getResources();
@@ -39,7 +63,16 @@ Window.create({
         this.debugDraw = new Draw(ctx);
 
         this.gui = new GUI(ctx, this.getWidth(), this.getHeight());
-        this.gui.addHeader('Settings');
+        this.gui.addHeader('Options');
+        this.addEventListener(this.gui);
+
+
+        this.gui.addRadioList('Models', this, 'selectedModel', MODELS.map(function(name) {
+            return { name: name, value: name }
+        }), function(modelName) {
+            this.loadModel(modelName);
+        }.bind(this))
+
 
         this.camera  = new PerspCamera(45, this.getAspectRatio(), 0.01, 200.0);
         this.camera.lookAt([-2, 0.5, -2], [0, 0, 0], [0, 1, 0]);
@@ -56,17 +89,11 @@ Window.create({
         this.showNormals = ctx.createProgram(res.showNormalsVert, res.showNormalsFrag);
         this.showTexCoords = ctx.createProgram(res.showTexCoordsVert, res.showTexCoordsFrag);
 
-        var file = ASSETS_DIR + '/models/duck/duck.gltf';
-        //var file = ASSETS_DIR + '/models/rambler/Rambler.gltf';
-        //var file = ASSETS_DIR + '/models/aracha/aracha-full-anim.gltf';
-        //var file = ASSETS_DIR + '/models/SuperMurdoch/SuperMurdoch.gltf';
-        //var file = ASSETS_DIR + '/models/box/box.gltf';
-        //var file = ASSETS_DIR + '/models/wine/wine.gltf';
-        //var file = ASSETS_DIR + '/models/demo_collada_noanim/demo_collada_noanim.gltf';
-        //var file = ASSETS_DIR + '/models/beeple/BigHead.gltf';
-        //var file = ASSETS_DIR + '/models/beeple/HugePounder.gltf';
-        //var file = ASSETS_DIR + '/models/beeple/SideSmasher.gltf';
-        //var file = ASSETS_DIR + '/models/beeple/MEASURE_TWO.gltf';
+        this.loadModel(this.selectedModel)
+    },
+    loadModel: function(modelName) {
+        var ctx = this.getContext();
+        var file = MODELS_DIR + '/' + modelName + '/glTF/' + modelName + '.gltf';
         loadGLTF(ctx, file, function(err, data) {
             if (err) {
                 log('loadGLTF done', err);
@@ -77,7 +104,6 @@ Window.create({
             this.data = data;
         }.bind(this));
     },
-    nodesDrawn: 0,
     draw: function() {
         var ctx = this.getContext();
 
@@ -135,6 +161,7 @@ Window.create({
                     ctx.multMatrix(nodeInfo.matrix);
                 }
                 if (nodeInfo.rotation) {
+                    //console.log(nodeInfo.rotation)
                     //TODO: implement quat rotation
                     //ctx.multQuat(nodeInfo.rotation);
                 }
