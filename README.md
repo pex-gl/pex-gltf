@@ -27,10 +27,11 @@ loadGLTF('scene.gltf', function(err, data) {
 Download the Khronos Group glTF repository containing example models (warning: it's 500MB) either by clonning the [glTF repository](https://github.com/KhronosGroup/glTF):
 
 ```
+cd example
 git clone https://github.com/KhronosGroup/glTF
 ```
 
-or by downloading [the ZIP copy](https://github.com/KhronosGroup/glTF/archive/master.zip) and unpacking it into `pex-gltf/glTF`
+or by downloading [the ZIP copy](https://github.com/KhronosGroup/glTF/archive/master.zip) and unpacking it into `pex-gltf/example/glTF`
 
 ## License
 
