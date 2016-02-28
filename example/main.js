@@ -5,7 +5,7 @@ var PerspCamera   = require('pex-cam/PerspCamera');
 var Arcball       = require('pex-cam/Arcball');
 var GUI           = require('pex-gui');
 var log           = require('debug')('main');
-var debug         = require('debug')//.enable('*');
+var debug         = require('debug').enable('*');
 var loadGLTF      = require('../');
 var isBrowser     = require('is-browser');
 var Vec3          = require('pex-math/Vec3');
@@ -30,23 +30,23 @@ AABB.includePoint = function(a, p) {
 }
 
 var MODELS = [
-    '2_cylinder_engine',
-    'CesiumMan',
-    'CesiumMilkTruck',
-    'Reciprocating_Saw',
-    'RiggedFigure',
-    'RiggedSimple',
-    'box',
-    'boxAnimated',
-    'boxSemantics',
-    'boxTextured',
-    'boxWithoutIndices',
-    'brainsteam',
-    'buggy',
-    'duck',
-    'gearbox_assy',
-    'monster',
-    'vc',
+    '2_cylinder_engine/glTF/2_cylinder_engine.gltf',
+    'box/glTF/box.gltf',
+    'boxAnimated/glTF/glTF.gltf',
+    'boxSemantics/glTF/boxSemantics.gltf',//TODO: fill bug fix on glTF repo
+    'boxTextured/glTF/CesiumTexturedBoxTest.gltf', //doesn't show textures on the other sides??
+    //'boxWithoutIndices/glTF/boxWithoutIndices.gltf', //TODO: embedded only, fill bug fix on glTFL repo
+    'brainsteam/glTF/brainsteam.gltf',
+    'buggy/glTF/buggy.gltf',
+    'CesiumMan/glTF/Cesium_Man.gltf',
+    'CesiumMilkTruck/glTF/CesiumMilkTruck.gltf',
+    'duck/glTF/duck.gltf',
+    'gearbox_assy/glTF/gearbox_assy.gltf',
+    'monster/glTF/monster.gltf',
+    'Reciprocating_Saw/glTF/Reciprocating_Saw.gltf',
+    'RiggedFigure/glTF/rigged-figure.gltf',
+    'RiggedSimple/glTF/RiggedSimple.gltf',
+    'vc/glTF/vc.gltf'
 ]
 
 
@@ -68,7 +68,7 @@ Window.create({
         texturedFrag      : { glsl : glslify(__dirname + '/assets/glsl/Textured.frag')},
         checkerImage      : { image: ASSETS_DIR + '/textures/checker.png' }
     },
-    selectedModel: 'duck',
+    selectedModel: 'duck/glTF/duck.gltf',
     sceneBBoxDirty: false,
     tmpPoint: Vec3.create(),
     tmpMatrix: Mat4.create(),
@@ -90,14 +90,14 @@ Window.create({
             { name: 'Diffuse', value: 'diffuse' }
         ])
 
-        this.gui.addRadioList('Models', this, 'selectedModel', MODELS.map(function(name) {
-            return { name: name, value: name }
+        this.gui.addRadioList('Models', this, 'selectedModel', MODELS.map(function(modelFile) {
+            return { name: modelFile.split('/')[0], value: modelFile }
         }), function(modelName) {
             this.loadModel(modelName);
         }.bind(this))
 
         this.camera  = new PerspCamera(45, this.getAspectRatio(), 0.01, 200.0);
-        this.camera.lookAt([-2, 0.5, -2], [0, 0, 0], [0, 1, 0]);
+        this.camera.lookAt([1.5, 1, -1.5], [0, 0.25, 0], [0, 1, 0]);
         ctx.setProjectionMatrix(this.camera.getProjectionMatrix());
         ctx.setViewMatrix(this.camera.getViewMatrix());
 
@@ -116,9 +116,9 @@ Window.create({
 
         this.loadModel(this.selectedModel)
     },
-    loadModel: function(modelName) {
+    loadModel: function(model) {
         var ctx = this.getContext();
-        var file = MODELS_DIR + '/' + modelName + '/glTF/' + modelName + '.gltf';
+        var file = MODELS_DIR + '/' + model;
         loadGLTF(ctx, file, function(err, data) {
             if (err) {
                 log('loadGLTF done', err);
