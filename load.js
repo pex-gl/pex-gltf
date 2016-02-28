@@ -4,6 +4,7 @@ var loadText   = require('pex-io/loadText');
 var loadImage  = require('pex-io/loadImage');
 var log        = require('debug')('pex/gltf');
 var info       = require('debug')('pex/gltf/info');
+var warn       = require('debug')('pex/gltf/warn');
 var path       = require('path');
 var async      = require('async');
 var iterateObject = require("iterate-object");
@@ -21,6 +22,8 @@ var WebGLConstants = {
     35676: 'FLOAT_MAT4',            //0x8B5C
      5126: 'FLOAT'                  //0x1406
 };
+
+var SupportedAttributeSemantics = ['POSITION', 'NORMAL', 'TEXCOORD_0'];
 
 function handleBuffer(ctx, json, basePath, bufferName, bufferInfo, callback) {
     log('handleBuffer', bufferName, bufferInfo.uri);
@@ -139,11 +142,13 @@ function buildMeshes(ctx, json, callback) {
 
 
             iterateObject(primitiveInfo.attributes, function(accessorName, attributeSemantic) {
+                if (SupportedAttributeSemantics.indexOf(attributeSemantic) == -1) {
+                    warn('buildAttribute unsupported attribute semantic', attributeSemantic);
+                    return;
+                }
                 var attributeInfo = buildBufferInfo(accessorName);
                 var attributeLocation = AttributeLocationMap[attributeSemantic];
                 log('buildAttribute', attributeSemantic, attributeInfo.opts);
-                //va.addAttribute(attributeName, attributeInfo.data, attributeInfo.opts); //TODO: use ctx
-                //
                 var vertexBuffer = ctx.createBuffer(ctx.ARRAY_BUFFER, attributeInfo.data, ctx.STATIC_DRAW);
                 attributes.push({
                     buffer: vertexBuffer,
