@@ -223,7 +223,8 @@ function handleTexture(ctx, json, basePath, textureName, textureInfo, callback) 
         var img = json.images[textureInfo.source]._img;
         var opts = {
             magFilter: ctx.NEAREST,
-            minFilter: ctx.NEAREST
+            minFilter: ctx.NEAREST,
+            flipY: false
         }
         textureInfo._texture = ctx.createTexture2D(img, img.width, img.height, opts);
         callback(null, textureInfo);
