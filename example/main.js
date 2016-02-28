@@ -1,6 +1,6 @@
 var Window        = require('pex-sys/Window');
 var Draw          = require('pex-draw');
-var glslify       = require('glslify');
+var glslify       = require('glslify-promise');
 var PerspCamera   = require('pex-cam/PerspCamera');
 var Arcball       = require('pex-cam/Arcball');
 var GUI           = require('pex-gui');
@@ -22,18 +22,20 @@ Window.create({
         width: 1280,
         height: 720
     },
-    resourcesRaw: {
-        showColorsVert    : { text : glslify(__dirname + '/assets/glsl/ShowColors.vert')},
-        showColorsFrag    : { text : glslify(__dirname + '/assets/glsl/ShowColors.frag')},
-        solidColorVert    : { text : glslify(__dirname + '/assets/glsl/SolidColor.vert')},
-        solidColorFrag    : { text : glslify(__dirname + '/assets/glsl/SolidColor.frag')},
-        showNormalsVert   : { text : glslify(__dirname + '/assets/glsl/ShowNormals.vert')},
-        showNormalsFrag   : { text : glslify(__dirname + '/assets/glsl/ShowNormals.frag')},
-        showTexCoordsVert : { text : glslify(__dirname + '/assets/glsl/ShowTexCoords.vert')},
-        showTexCoordsFrag : { text : glslify(__dirname + '/assets/glsl/ShowTexCoords.frag')}
+    resources: {
+        showColorsVert    : { glsl : glslify(__dirname + '/assets/glsl/ShowColors.vert')},
+        showColorsFrag    : { glsl : glslify(__dirname + '/assets/glsl/ShowColors.frag')},
+        solidColorVert    : { glsl : glslify(__dirname + '/assets/glsl/SolidColor.vert')},
+        solidColorFrag    : { glsl : glslify(__dirname + '/assets/glsl/SolidColor.frag')},
+        showNormalsVert   : { glsl : glslify(__dirname + '/assets/glsl/ShowNormals.vert')},
+        showNormalsFrag   : { glsl : glslify(__dirname + '/assets/glsl/ShowNormals.frag')},
+        showTexCoordsVert : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.vert')},
+        showTexCoordsFrag : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.frag')}
     },
     init: function() {
         var ctx = this.getContext();
+        var res = this.getResources();
+
         this.debugDraw = new Draw(ctx);
 
         this.gui = new GUI(ctx, this.getWidth(), this.getHeight());
@@ -49,30 +51,30 @@ Window.create({
         this.arcball.setSpeed(1);
         this.addEventListener(this.arcball);
 
-        this.showColorsProgram = ctx.createProgram(this.resourcesRaw.showColorsVert.text, this.resourcesRaw.showColorsFrag.text);
-        this.solidColorProgram = ctx.createProgram(this.resourcesRaw.solidColorVert.text, this.resourcesRaw.solidColorFrag.text);
-        this.showNormals = ctx.createProgram(this.resourcesRaw.showNormalsVert.text, this.resourcesRaw.showNormalsFrag.text);
-        this.showTexCoords = ctx.createProgram(this.resourcesRaw.showTexCoordsVert.text, this.resourcesRaw.showTexCoordsFrag.text);
+        this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag);
+        this.solidColorProgram = ctx.createProgram(res.solidColorVert, res.solidColorFrag);
+        this.showNormals = ctx.createProgram(res.showNormalsVert, res.showNormalsFrag);
+        this.showTexCoords = ctx.createProgram(res.showTexCoordsVert, res.showTexCoordsFrag);
 
-        //var file = ASSETS_DIR + '/models/duck/duck.gltf';
+        var file = ASSETS_DIR + '/models/duck/duck.gltf';
         //var file = ASSETS_DIR + '/models/rambler/Rambler.gltf';
         //var file = ASSETS_DIR + '/models/aracha/aracha-full-anim.gltf';
         //var file = ASSETS_DIR + '/models/SuperMurdoch/SuperMurdoch.gltf';
         //var file = ASSETS_DIR + '/models/box/box.gltf';
         //var file = ASSETS_DIR + '/models/wine/wine.gltf';
         //var file = ASSETS_DIR + '/models/demo_collada_noanim/demo_collada_noanim.gltf';
-        var file = ASSETS_DIR + '/models/beeple/BigHead.gltf';
+        //var file = ASSETS_DIR + '/models/beeple/BigHead.gltf';
         //var file = ASSETS_DIR + '/models/beeple/HugePounder.gltf';
         //var file = ASSETS_DIR + '/models/beeple/SideSmasher.gltf';
         //var file = ASSETS_DIR + '/models/beeple/MEASURE_TWO.gltf';
-        loadGLTF(ctx, file, function(err, scene) {
+        loadGLTF(ctx, file, function(err, data) {
             if (err) {
                 log('loadGLTF done', err);
                 return;
             }
             log('loadGLTF done');
 
-            this.scene = scene;
+            this.data = data;
         }.bind(this));
     },
     nodesDrawn: 0,
@@ -156,8 +158,8 @@ Window.create({
             });
         }
 
-        if (this.scene) {
-            var json = this.scene;
+        if (this.data) {
+            var json = this.data;
             var nodes = json.nodes;
             var meshes = json.meshes;
             drawNodes(json, json.scenes[json.scene].nodes)

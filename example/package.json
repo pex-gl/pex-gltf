@@ -12,14 +12,18 @@
     "debug": "^2.2.0",
     "is-browser": "^2.0.1",
     "iterate-object": "^1.1.0",
-    "pex-cam": "pex-gl/pex-cam",
-    "pex-color": "pex-gl/pex-color",
-    "pex-context": "pex-gl/pex-context",
-    "pex-draw": "pex-gl/pex-draw",
-    "pex-geom": "pex-gl/pex-geom",
-    "pex-gui": "pex-gl/pex-gui",
-    "pex-io": "pex-gl/pex-io",
-    "pex-math": "pex-gl/pex-math",
-    "pex-sys": "pex-gl/pex-sys"
+    "glslify-promise": "^1.0.1",
+    "is-browser": "^2.0.1",
+    "normals": "^1.0.1",
+    "pex-cam": "^1.0.0-beta.1",
+    "pex-color": "^1.1.1",
+    "pex-context": "^1.0.0-beta.3",
+    "pex-draw": "^1.0.0-beta.1",
+    "pex-geom": "^1.0.0-beta.1",
+    "pex-gui": "^1.0.0-beta.1",
+    "pex-io": "^1.0.0-beta.1",
+    "pex-math": "^1.0.0-beta.1",
+    "pex-random": "^1.0.0-beta.1",
+    "pex-sys": "^1.0.0-beta.7"
   }
 }
