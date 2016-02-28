@@ -4,8 +4,8 @@ var glslify       = require('glslify-promise');
 var PerspCamera   = require('pex-cam/PerspCamera');
 var Arcball       = require('pex-cam/Arcball');
 var GUI           = require('pex-gui');
-var debug         = require('debug').enable('*');
 var log           = require('debug')('main');
+var debug         = require('debug')//.enable('*');
 var loadGLTF      = require('../');
 var isBrowser     = require('is-browser');
 var Vec3          = require('pex-math/Vec3');
@@ -13,15 +13,26 @@ var iterateObject = require('iterate-object');
 var Mat4          = require('pex-math/Mat4');
 var mult44        = require('gl-mat4/multiply')
 var random        = require('pex-random');
+var AABB          = require('pex-geom/AABB');
+
 
 var ASSETS_DIR    = isBrowser ? 'assets' : __dirname + '/assets';
 var MODELS_DIR    = isBrowser ? 'glTF/sampleModels' : __dirname + '/glTF/sampleModels';
+
+AABB.includePoint = function(a, p) {
+    a[0][0] = Math.min(a[0][0], p[0])
+    a[0][1] = Math.min(a[0][1], p[1])
+    a[0][2] = Math.min(a[0][2], p[2])
+    a[1][0] = Math.max(a[1][0], p[0])
+    a[1][1] = Math.max(a[1][1], p[1])
+    a[1][2] = Math.max(a[1][2], p[2])
+    return a;
+}
 
 var MODELS = [
     '2_cylinder_engine',
     'CesiumMan',
     'CesiumMilkTruck',
-    'README.md',
     'Reciprocating_Saw',
     'RiggedFigure',
     'RiggedSimple',
@@ -32,7 +43,6 @@ var MODELS = [
     'boxWithoutIndices',
     'brainsteam',
     'buggy',
-    'convertAll.sh',
     'duck',
     'gearbox_assy',
     'monster',
@@ -55,7 +65,10 @@ Window.create({
         showTexCoordsVert : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.vert')},
         showTexCoordsFrag : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.frag')}
     },
-    selectedModel: 'duck',
+    selectedModel: 'monster',
+    sceneBBoxDirty: false,
+    tmpPoint: Vec3.create(),
+    tmpMatrix: Mat4.create(),
     init: function() {
         var ctx = this.getContext();
         var res = this.getResources();
@@ -102,7 +115,14 @@ Window.create({
             log('loadGLTF done');
 
             this.data = data;
-        }.bind(this));
+            this.scene = data.scenes[data.scene]
+            this.sceneBBox = AABB.create();
+            this.sceneSize = Vec3.create();
+            this.sceneScale = 1;
+            this.sceneCenter = Vec3.create();
+
+            this.sceneBBoxDirty = true;
+        }.bind(this), false);
     },
     draw: function() {
         var ctx = this.getContext();
@@ -129,32 +149,44 @@ Window.create({
         //var solidColorProgram = this.solidColorProgram;
         //this.solidColorProgram.setUniform('uPointSize', 20);
 
-        random.seed(0);
+        var self = this;
 
-        function drawMesh(json, meshInfo) {
+        function drawMesh(data, meshInfo) {
             meshInfo.primitives.forEach(function(primitive) {
                 var r = random.float();
                 var g = random.float();
                 var b = random.float();
                 //solidColorProgram.setUniform('uColor', [r, g, b, 1]);
 
-                var numVerts = json.accessors[primitive.indices].count;
-                var positionAttrib = json.accessors[primitive.attributes.POSITION];
+                var numVerts = data.accessors[primitive.indices].count;
+                var positionAttrib = data.accessors[primitive.attributes.POSITION];
                 var minPos = positionAttrib.min;
                 var maxPos = positionAttrib.max;
-                var size = Vec3.sub(Vec3.copy(maxPos), minPos);
-                var center = Vec3.scale(Vec3.add(Vec3.copy(minPos), maxPos), -0.5);
-                var scale = Math.max(size[0], Math.max(size[1], size[2]));
-                ctx.pushModelMatrix();
-                ctx.bindVertexArray(primitive.vertexArray);
-                ctx.drawElements(ctx.TRIANGLES, numVerts, 0);
-                ctx.popModelMatrix();
-            }.bind(this))
+                //var size = Vec3.sub(Vec3.copy(maxPos), minPos);
+                //var center = Vec3.scale(Vec3.add(Vec3.copy(minPos), maxPos), -0.5);
+                //var scale = Math.max(size[0], Math.max(size[1], size[2]));
+
+                if (self.sceneBBoxDirty) {
+                    ctx.getModelMatrix(self.tmpMatrix);
+
+                    Vec3.set(self.tmpPoint, minPos);
+                    Vec3.multMat4(self.tmpPoint, self.tmpMatrix);
+                    AABB.includePoint(self.sceneBBox, self.tmpPoint);
+
+                    Vec3.set(self.tmpPoint, maxPos);
+                    Vec3.multMat4(self.tmpPoint, self.tmpMatrix);
+                    AABB.includePoint(self.sceneBBox, self.tmpPoint);
+                }
+                else {
+                    ctx.pushModelMatrix();
+                    ctx.bindVertexArray(primitive.vertexArray);
+                    ctx.drawElements(ctx.TRIANGLES, numVerts, 0);
+                    ctx.popModelMatrix();
+                }
+            })
         }
 
-        var self = this;
-
-        function drawNodes(json, nodes) {
+        function drawNodes(data, nodes) {
             nodes.forEach(function(nodeInfo) {
                 ctx.pushModelMatrix();
                 if (nodeInfo.matrix) {
@@ -174,22 +206,35 @@ Window.create({
                 }
                 if (nodeInfo.meshes) {
                     nodeInfo.meshes.forEach(function(meshId) {
-                        var meshInfo = meshes[meshId];
-                        drawMesh(json, meshInfo);
+                        var meshInfo = data.meshes[meshId];
+                        drawMesh(data, meshInfo);
                     });
                 }
                 if (nodeInfo.children) {
-                    drawNodes(json, nodeInfo.children);
+                    drawNodes(data, nodeInfo.children);
                 }
                 ctx.popModelMatrix();
             });
         }
 
         if (this.data) {
-            var json = this.data;
-            var nodes = json.nodes;
-            var meshes = json.meshes;
-            drawNodes(json, json.scenes[json.scene].nodes)
+            if (this.sceneBBoxDirty) {
+                drawNodes(this.data, this.scene.nodes)
+                AABB.size(this.sceneBBox, this.sceneSize)
+                AABB.center(this.sceneBBox, this.sceneCenter)
+                var maxSize = Math.max(this.sceneSize[0], Math.max(this.sceneSize[1], this.sceneSize[2]));
+                this.sceneScale = [1 / maxSize, 1 / maxSize, 1 / maxSize];
+                this.sceneOffset = [ -this.sceneCenter[0], -this.sceneCenter[1] + this.sceneSize[1]/2, -this.sceneCenter[2]];
+                this.sceneBBoxDirty = false;
+            }
+            else {
+                ctx.pushModelMatrix()
+                ctx.scale(this.sceneScale)
+                ctx.translate(this.sceneOffset);
+                drawNodes(this.data, this.scene.nodes)
+                this.debugDraw.debugAABB(this.sceneBBox);
+                ctx.popModelMatrix()
+            }
         }
 
         this.gui.draw();
