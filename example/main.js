@@ -63,12 +63,16 @@ Window.create({
         showNormalsVert   : { glsl : glslify(__dirname + '/assets/glsl/ShowNormals.vert')},
         showNormalsFrag   : { glsl : glslify(__dirname + '/assets/glsl/ShowNormals.frag')},
         showTexCoordsVert : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.vert')},
-        showTexCoordsFrag : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.frag')}
+        showTexCoordsFrag : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.frag')},
+        texturedVert      : { glsl : glslify(__dirname + '/assets/glsl/Textured.vert')},
+        texturedFrag      : { glsl : glslify(__dirname + '/assets/glsl/Textured.frag')},
+        checkerImage      : { image: ASSETS_DIR + '/textures/checker.png' }
     },
-    selectedModel: 'monster',
+    selectedModel: 'duck',
     sceneBBoxDirty: false,
     tmpPoint: Vec3.create(),
     tmpMatrix: Mat4.create(),
+    drawingMode: 'diffuse',
     init: function() {
         var ctx = this.getContext();
         var res = this.getResources();
@@ -79,13 +83,18 @@ Window.create({
         this.gui.addHeader('Options');
         this.addEventListener(this.gui);
 
+        this.gui.addRadioList('Drawing Mode', this, 'drawingMode', [
+            { name: 'Show normals', value: 'normals' },
+            { name: 'Show texCoords', value: 'texCoords' },
+            { name: 'Show colors', value: 'colors' },
+            { name: 'Diffuse', value: 'diffuse' }
+        ])
 
         this.gui.addRadioList('Models', this, 'selectedModel', MODELS.map(function(name) {
             return { name: name, value: name }
         }), function(modelName) {
             this.loadModel(modelName);
         }.bind(this))
-
 
         this.camera  = new PerspCamera(45, this.getAspectRatio(), 0.01, 200.0);
         this.camera.lookAt([-2, 0.5, -2], [0, 0, 0], [0, 1, 0]);
@@ -99,8 +108,11 @@ Window.create({
 
         this.showColorsProgram = ctx.createProgram(res.showColorsVert, res.showColorsFrag);
         this.solidColorProgram = ctx.createProgram(res.solidColorVert, res.solidColorFrag);
-        this.showNormals = ctx.createProgram(res.showNormalsVert, res.showNormalsFrag);
-        this.showTexCoords = ctx.createProgram(res.showTexCoordsVert, res.showTexCoordsFrag);
+        this.showNormalsProgram = ctx.createProgram(res.showNormalsVert, res.showNormalsFrag);
+        this.showTexCoordsProgram = ctx.createProgram(res.showTexCoordsVert, res.showTexCoordsFrag);
+        this.texturedProgram = ctx.createProgram(res.texturedVert, res.texturedFrag);
+
+        this.checkerTex = ctx.createTexture2D(res.checkerImage)
 
         this.loadModel(this.selectedModel)
     },
@@ -140,18 +152,17 @@ Window.create({
         this.debugDraw.setColor([0.5, 0.5, 0.5, 1.0]);
         this.debugDraw.drawGrid([5, 5], 10);
 
-        ctx.bindProgram(this.showNormals);
-        this.showNormals.setUniform('uPointSize', 20);
-        //ctx.bindProgram(this.showTexCoords);
-        //this.showTexCoords.setUniform('uPointSize', 20);
-        //ctx.bindProgram(this.solidColorProgram);
-        //this.solidColorProgram.setUniform('uColor', [1, 0, 0, 1]);
-        //var solidColorProgram = this.solidColorProgram;
-        //this.solidColorProgram.setUniform('uPointSize', 20);
+        switch(this.drawingMode) {
+            case 'normals': ctx.bindProgram(this.showNormalsProgram); break;
+            case 'texCoords': ctx.bindProgram(this.showTexCoordsProgram); break;
+            case 'diffuse': ctx.bindProgram(this.texturedProgram); break;
+        }
 
         var self = this;
 
         function drawMesh(data, meshInfo) {
+            ctx.bindTexture(self.checkerTex, 0);
+
             meshInfo.primitives.forEach(function(primitive) {
                 var r = random.float();
                 var g = random.float();
@@ -162,9 +173,19 @@ Window.create({
                 var positionAttrib = data.accessors[primitive.attributes.POSITION];
                 var minPos = positionAttrib.min;
                 var maxPos = positionAttrib.max;
-                //var size = Vec3.sub(Vec3.copy(maxPos), minPos);
-                //var center = Vec3.scale(Vec3.add(Vec3.copy(minPos), maxPos), -0.5);
-                //var scale = Math.max(size[0], Math.max(size[1], size[2]));
+
+                if (primitive.material && self.drawingMode == 'diffuse') {
+                    var material = data.materials[primitive.material];
+                    var diffuseTex = material.values.diffuse && data.textures && data.textures[material.values.diffuse];
+                    if (diffuseTex && diffuseTex._texture) {
+                        ctx.bindProgram(self.texturedProgram);
+                        ctx.bindTexture(diffuseTex._texture, 0)
+                    }
+                    else if (Array.isArray(material.values.diffuse)) {
+                        ctx.bindProgram(self.solidColorProgram);
+                        self.solidColorProgram.setUniform('uColor', material.values.diffuse)
+                    }
+                }
 
                 if (self.sceneBBoxDirty) {
                     ctx.getModelMatrix(self.tmpMatrix);
@@ -229,10 +250,14 @@ Window.create({
             }
             else {
                 ctx.pushModelMatrix()
-                ctx.scale(this.sceneScale)
+                ctx.scale(this.sceneScale);
                 ctx.translate(this.sceneOffset);
-                drawNodes(this.data, this.scene.nodes)
+
+                drawNodes(this.data, this.scene.nodes);
+
+                ctx.bindProgram(this.showColorsProgram);
                 this.debugDraw.debugAABB(this.sceneBBox);
+
                 ctx.popModelMatrix()
             }
         }
