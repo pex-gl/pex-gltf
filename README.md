@@ -6,7 +6,31 @@ glTF loader for the pex library
 
 ## Usage
 
-[![NPM](https://nodei.co/npm/pex-gltf.png)](https://www.npmjs.com/package/pex-gltf)
+```
+npm install pex-gltf --save
+```
+
+```javascript
+var loadGLTF = require('pex-gltf');
+
+loadGLTF('scene.gltf', function(err, data) {
+    if (!err) {
+        //data.meshes
+        //data.scenes
+        //...
+    }
+})
+```
+
+### Running the example code
+
+Download the Khronos Group glTF repository containing example models (warning: it's 500MB) either by clonning the [glTF repository](https://github.com/KhronosGroup/glTF):
+
+```
+git clone https://github.com/KhronosGroup/glTF
+```
+
+or by downloading [the ZIP copy](https://github.com/KhronosGroup/glTF/archive/master.zip) and unpacking it into `pex-gltf/glTF`
 
 ## License
 
