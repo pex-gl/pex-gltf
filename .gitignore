@@ -4,5 +4,6 @@ node_modules
 .DS_Store
 .atom-build.json
 glTF
-example/assets/models
+models
 old
+NOTES.md

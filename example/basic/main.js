@@ -5,8 +5,8 @@ var PerspCamera   = require('pex-cam/PerspCamera');
 var Arcball       = require('pex-cam/Arcball');
 var GUI           = require('pex-gui');
 var log           = require('debug')('main');
-var debug         = require('debug').enable('*');
-var loadGLTF      = require('../');
+var debug         = require('debug');//.enable('*');
+var loadGLTF      = require('../../');
 var isBrowser     = require('is-browser');
 var Vec3          = require('pex-math/Vec3');
 var iterateObject = require('iterate-object');
@@ -16,7 +16,7 @@ var random        = require('pex-random');
 var AABB          = require('pex-geom/AABB');
 
 var ASSETS_DIR    = isBrowser ? 'assets' : __dirname + '/assets';
-var MODELS_DIR    = isBrowser ? 'glTF/sampleModels' : __dirname + '/glTF/sampleModels';
+var MODELS_DIR    = isBrowser ? '../glTF/sampleModels' : __dirname + '/../glTF/sampleModels';
 
 AABB.includePoint = function(a, p) {
     a[0][0] = Math.min(a[0][0], p[0])
@@ -29,23 +29,22 @@ AABB.includePoint = function(a, p) {
 }
 
 var MODELS = [
-    '2_cylinder_engine/glTF/2_cylinder_engine.gltf',
-    'box/glTF/box.gltf',
-    'boxAnimated/glTF/glTF.gltf',
-    'boxSemantics/glTF/boxSemantics.gltf',//TODO: fill bug fix on glTF repo
-    'boxTextured/glTF/CesiumTexturedBoxTest.gltf', //doesn't show textures on the other sides??
-    //'boxWithoutIndices/glTF/boxWithoutIndices.gltf', //TODO: embedded only, fill bug fix on glTFL repo
-    'brainsteam/glTF/brainsteam.gltf',
-    'buggy/glTF/buggy.gltf',
-    'CesiumMan/glTF/Cesium_Man.gltf',
-    'CesiumMilkTruck/glTF/CesiumMilkTruck.gltf',
-    'duck/glTF/duck.gltf',
-    'gearbox_assy/glTF/gearbox_assy.gltf',
-    'monster/glTF/monster.gltf',
-    'Reciprocating_Saw/glTF/Reciprocating_Saw.gltf',
-    'RiggedFigure/glTF/rigged-figure.gltf',
-    'RiggedSimple/glTF/RiggedSimple.gltf',
-    'vc/glTF/vc.gltf'
+    MODELS_DIR + '/2_cylinder_engine/glTF/2_cylinder_engine.gltf',
+    MODELS_DIR + '/box/glTF/box.gltf',
+    MODELS_DIR + '/boxAnimated/glTF/glTF.gltf',
+    MODELS_DIR + '/boxSemantics/glTF/boxSemantics.gltf',//TODO: fill bug fix on glTF repo
+    MODELS_DIR + '/boxTextured/glTF/CesiumTexturedBoxTest.gltf', //doesn't show textures on the other sides??
+    MODELS_DIR + ///'boxWithoutIndices/glTF/boxWithoutIndices.gltf', //TODO: embedded only, fill bug fix on glTFL repo
+    MODELS_DIR + '/brainsteam/glTF/brainsteam.gltf',
+    MODELS_DIR + '/buggy/glTF/buggy.gltf',
+    MODELS_DIR + '/CesiumMan/glTF/Cesium_Man.gltf',
+    MODELS_DIR + '/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf',
+    MODELS_DIR + '/duck/glTF/duck.gltf',
+    MODELS_DIR + '/gearbox_assy/glTF/gearbox_assy.gltf',
+    MODELS_DIR + '/monster/glTF/monster.gltf',
+    MODELS_DIR + '/Reciprocating_Saw/glTF/Reciprocating_Saw.gltf',
+    MODELS_DIR + '/RiggedFigure/glTF/rigged-figure.gltf',
+    MODELS_DIR + '/RiggedSimple/glTF/RiggedSimple.gltf',
 ]
 
 
@@ -71,7 +70,7 @@ Window.create({
         diffuseTexturedFrag      : { glsl : glslify(__dirname + '/assets/glsl/DiffuseTextured.frag')},
         checkerImage      : { image: ASSETS_DIR + '/textures/checker.png' }
     },
-    selectedModel: 'duck/glTF/duck.gltf',
+    selectedModel: MODELS_DIR+ '/duck/glTF/duck.gltf',
     sceneBBoxDirty: false,
     tmpPoint: Vec3.create(),
     tmpMatrix: Mat4.create(),
@@ -120,9 +119,8 @@ Window.create({
 
         this.loadModel(this.selectedModel)
     },
-    loadModel: function(model) {
+    loadModel: function(file) {
         var ctx = this.getContext();
-        var file = MODELS_DIR + '/' + model;
         loadGLTF(ctx, file, function(err, data) {
             if (err) {
                 log('loadGLTF done', err);
@@ -180,14 +178,18 @@ Window.create({
 
                 if (primitive.material && self.drawingMode == 'diffuse') {
                     var material = data.materials[primitive.material];
-                    var diffuseTex = material.values.diffuse && data.textures && data.textures[material.values.diffuse];
-                    if (diffuseTex && diffuseTex._texture) {
-                        ctx.bindProgram(self.diffuseTexturedProgram);
-                        ctx.bindTexture(diffuseTex._texture, 0)
-                    }
-                    else if (Array.isArray(material.values.diffuse)) {
-                        ctx.bindProgram(self.diffuseProgram);
-                        self.diffuseProgram.setUniform('uColor', material.values.diffuse)
+                    //TODO: what is instanceTechnique?
+                    var values = material.values || material.instanceTechnique.values;
+                    if (values) {
+                        var diffuseTex = values.diffuse && data.textures && data.textures[values.diffuse];
+                        if (diffuseTex && diffuseTex._texture) {
+                            ctx.bindProgram(self.diffuseTexturedProgram);
+                            ctx.bindTexture(diffuseTex._texture, 0)
+                        }
+                        else if (Array.isArray(values.diffuse)) {
+                            ctx.bindProgram(self.diffuseProgram);
+                            self.diffuseProgram.setUniform('uColor', values.diffuse)
+                        }
                     }
                 }
 
