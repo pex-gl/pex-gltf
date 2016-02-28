@@ -1,6 +1,6 @@
 var Window        = require('pex-sys/Window');
 var Draw          = require('pex-draw');
-var glslify       = require('./local_modules/glslify-sync');
+var glslify       = require('glslify');
 var PerspCamera   = require('pex-cam/PerspCamera');
 var Arcball       = require('pex-cam/Arcball');
 var GUI           = require('pex-gui');
@@ -55,12 +55,13 @@ Window.create({
         this.showTexCoords = ctx.createProgram(this.resourcesRaw.showTexCoordsVert.text, this.resourcesRaw.showTexCoordsFrag.text);
 
         //var file = ASSETS_DIR + '/models/duck/duck.gltf';
-        var file = ASSETS_DIR + '/models/rambler/Rambler.gltf';
+        //var file = ASSETS_DIR + '/models/rambler/Rambler.gltf';
+        //var file = ASSETS_DIR + '/models/aracha/aracha-full-anim.gltf';
         //var file = ASSETS_DIR + '/models/SuperMurdoch/SuperMurdoch.gltf';
         //var file = ASSETS_DIR + '/models/box/box.gltf';
         //var file = ASSETS_DIR + '/models/wine/wine.gltf';
         //var file = ASSETS_DIR + '/models/demo_collada_noanim/demo_collada_noanim.gltf';
-        //var file = ASSETS_DIR + '/models/beeple/BigHead.gltf';
+        var file = ASSETS_DIR + '/models/beeple/BigHead.gltf';
         //var file = ASSETS_DIR + '/models/beeple/HugePounder.gltf';
         //var file = ASSETS_DIR + '/models/beeple/SideSmasher.gltf';
         //var file = ASSETS_DIR + '/models/beeple/MEASURE_TWO.gltf';
