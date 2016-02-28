@@ -15,7 +15,6 @@ var mult44        = require('gl-mat4/multiply')
 var random        = require('pex-random');
 var AABB          = require('pex-geom/AABB');
 
-
 var ASSETS_DIR    = isBrowser ? 'assets' : __dirname + '/assets';
 var MODELS_DIR    = isBrowser ? 'glTF/sampleModels' : __dirname + '/glTF/sampleModels';
 
@@ -66,6 +65,10 @@ Window.create({
         showTexCoordsFrag : { glsl : glslify(__dirname + '/assets/glsl/ShowTexCoords.frag')},
         texturedVert      : { glsl : glslify(__dirname + '/assets/glsl/Textured.vert')},
         texturedFrag      : { glsl : glslify(__dirname + '/assets/glsl/Textured.frag')},
+        diffuseVert      : { glsl : glslify(__dirname + '/assets/glsl/Diffuse.vert')},
+        diffuseFrag      : { glsl : glslify(__dirname + '/assets/glsl/Diffuse.frag')},
+        diffuseTexturedVert      : { glsl : glslify(__dirname + '/assets/glsl/DiffuseTextured.vert')},
+        diffuseTexturedFrag      : { glsl : glslify(__dirname + '/assets/glsl/DiffuseTextured.frag')},
         checkerImage      : { image: ASSETS_DIR + '/textures/checker.png' }
     },
     selectedModel: 'duck/glTF/duck.gltf',
@@ -86,7 +89,6 @@ Window.create({
         this.gui.addRadioList('Drawing Mode', this, 'drawingMode', [
             { name: 'Show normals', value: 'normals' },
             { name: 'Show texCoords', value: 'texCoords' },
-            { name: 'Show colors', value: 'colors' },
             { name: 'Diffuse', value: 'diffuse' }
         ])
 
@@ -111,6 +113,8 @@ Window.create({
         this.showNormalsProgram = ctx.createProgram(res.showNormalsVert, res.showNormalsFrag);
         this.showTexCoordsProgram = ctx.createProgram(res.showTexCoordsVert, res.showTexCoordsFrag);
         this.texturedProgram = ctx.createProgram(res.texturedVert, res.texturedFrag);
+        this.diffuseProgram = ctx.createProgram(res.diffuseVert, res.diffuseFrag);
+        this.diffuseTexturedProgram = ctx.createProgram(res.diffuseTexturedVert, res.diffuseTexturedFrag);
 
         this.checkerTex = ctx.createTexture2D(res.checkerImage)
 
@@ -178,12 +182,12 @@ Window.create({
                     var material = data.materials[primitive.material];
                     var diffuseTex = material.values.diffuse && data.textures && data.textures[material.values.diffuse];
                     if (diffuseTex && diffuseTex._texture) {
-                        ctx.bindProgram(self.texturedProgram);
+                        ctx.bindProgram(self.diffuseTexturedProgram);
                         ctx.bindTexture(diffuseTex._texture, 0)
                     }
                     else if (Array.isArray(material.values.diffuse)) {
-                        ctx.bindProgram(self.solidColorProgram);
-                        self.solidColorProgram.setUniform('uColor', material.values.diffuse)
+                        ctx.bindProgram(self.diffuseProgram);
+                        self.diffuseProgram.setUniform('uColor', material.values.diffuse)
                     }
                 }
 
