@@ -1,8 +1,10 @@
+![](screenshot.jpg)
+
 # pex-gltf
 
 [![experimental](http://badges.github.io/stability-badges/dist/experimental.svg)](http://github.com/badges/stability-badges)
 
-glTF loader for the pex library
+[glTF](https://github.com/KhronosGroup/glTF) loader for the PEX library
 
 ## Usage
 
