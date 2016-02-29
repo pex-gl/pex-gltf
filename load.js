@@ -243,6 +243,7 @@ function handleProgram(ctx, json, basePath, programName, programInfo, callback) 
     vertSrc = vertSrc.replace(/a_position/g, 'position');
     vertSrc = vertSrc.replace(/a_normal/g, 'normal');
     vertSrc = vertSrc.replace(/a_texcoord0/g, 'texcoord');
+    fragSrc = '#ifdef GL_ES\nprecision highp float;\n#endif\n' + fragSrc;
     programInfo._program = ctx.createProgram(vertSrc, fragSrc);
     callback(null, programInfo);
 }
