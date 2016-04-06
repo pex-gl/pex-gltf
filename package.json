@@ -28,10 +28,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/vorg/pex-gltf.git"
+    "url": "git://github.com/pex-gl/pex-gltf.git"
   },
-  "homepage": "https://github.com/vorg/pex-gltf",
+  "homepage": "https://github.com/pex-gl/pex-gltf",
   "bugs": {
-    "url": "https://github.com/vorg/pex-gltf/issues"
+    "url": "https://github.com/pex-gl/pex-gltf/issues"
   }
 }
