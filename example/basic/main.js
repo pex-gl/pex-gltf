@@ -92,7 +92,8 @@ Window.create({
         ])
 
         this.gui.addRadioList('Models', this, 'selectedModel', MODELS.map(function(modelFile) {
-            return { name: modelFile.split('/')[0], value: modelFile }
+            var pathTokens = modelFile.split('/');
+            return { name: pathTokens[pathTokens.length-1].replace('.gltf', ''), value: modelFile }
         }), function(modelName) {
             this.loadModel(modelName);
         }.bind(this))
