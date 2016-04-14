@@ -6,15 +6,15 @@ var createSphere  = require('primitive-sphere');
 var Draw          = require('pex-draw/Draw');
 var PerspCamera   = require('pex-cam/PerspCamera');
 var Arcball       = require('pex-cam/Arcball');
-var Renderer      = require('../../../pex-renderer').Renderer;
+var Renderer      = require('pex-renderer').Renderer;
 var createSphere  = require('primitive-sphere');
 var createCube    = require('primitive-cube');
 var Draw          = require('pex-draw');
 var isBrowser     = require('is-browser');
 var loadScene     = require('./load-scene');
+var GUI           = require('pex-gui');
 var async         = require('async');
 var ASSETS_DIR    = isBrowser ? '' : __dirname + '/';
-
 var MODELS_DIR    = isBrowser ? '../glTF/sampleModels' : __dirname + '/../glTF/sampleModels';
 
 var MODELS = [
@@ -84,8 +84,16 @@ Window.create({
             })
 
             this.renderer._state.dirtySky = true;
-            console.log(scenes.length)
         }.bind(this));
+
+        this.initGUI();
+    },
+    initGUI: function() {
+        this.gui = new GUI(this.getContext(), this.getWidth(), this.getHeight());
+        this.addEventListener(this.gui);
+
+        this.gui.addParam('SSAO', this.renderer._state, 'ssao');
+        this.gui.addParam('Shadows', this.renderer._state, 'shadows');
     },
     updateSunPosition: function() {
         Mat4.setRotation(this.elevationMat, this.elevation/180*Math.PI, [0, 0, 1]);
@@ -108,8 +116,15 @@ Window.create({
         var indices = { data: geometry.cells };
         return ctx.createMesh(attributes, indices, primitiveType);
     },
+    onKeyDown: function(e) {
+        if (e.str == 'g') {
+            this.gui.toggleEnabled();
+        }
+    },
     draw: function() {
         this.arcball.apply();
         this.renderer.draw();
+
+        this.gui.draw();
     }
 })
