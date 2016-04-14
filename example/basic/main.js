@@ -11,7 +11,6 @@ var isBrowser     = require('is-browser');
 var Vec3          = require('pex-math/Vec3');
 var iterateObject = require('iterate-object');
 var Mat4          = require('pex-math/Mat4');
-var mult44        = require('gl-mat4/multiply')
 var random        = require('pex-random');
 var AABB          = require('pex-geom/AABB');
 
