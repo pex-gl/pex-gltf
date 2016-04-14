@@ -36,7 +36,7 @@ Window.create({
         type: '3d',
         width: 1280,
         height: 720,
-        fullScreen: isBrowser,
+        fullScreen: true,
         pixelRatio: 1
     },
     sunPosition: [0, 5, -5],
@@ -56,6 +56,7 @@ Window.create({
 
         var renderer = this.renderer = new Renderer(ctx, this.getWidth(), this.getHeight());
         renderer._state.exposure = 2.0;
+        renderer._state.ssao = false;
 
         this.camera = new PerspCamera(45, this.getAspectRatio(), 0.001, 100.0);;
         this.camera.lookAt([3.5,2,3], [0,0,0]);
