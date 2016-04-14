@@ -4,8 +4,7 @@
   "description": "glTF loader for pex tests",
   "main": "main.js",
   "scripts": {
-    "build": "browserify main.js -o main.web.js --ignore plask -g glslify-promise/transform -g glslify-sync/transform",
-    "watch": "watchify main.js -o main.web.js --ignore plask -g glslify-promise/transform -g glslify-sync/transform"
+    "build": "browserify main.js -o main.web.js --ignore plask -g glslify-promise/transform -g glslify-sync/transform"
   },
   "author": "Marcin Ignac <marcin.ignac@gmail.com> (http://marcinignac.com/)",
   "license": "MIT",
@@ -27,8 +26,9 @@
     "pex-io": "^1.1.0",
     "pex-math": "^1.0.0",
     "pex-random": "^1.0.0-beta.1",
-    "pex-renderer": "^0.1.4",
+    "pex-renderer": "^0.1.6",
     "pex-sys": "^1.1.1",
-    "primitive-cube": "^1.0.2"
+    "primitive-cube": "^1.0.2",
+    "primitive-sphere": "^2.0.0"
   }
 }
