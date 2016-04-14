@@ -187,7 +187,6 @@ function loadScene(ctx, renderer, gltfFile, callback) {
         var sceneCenter = AABB.center(bbox)
         var maxSize = Math.max(sceneSize[0], Math.max(sceneSize[1], sceneSize[2]));
 
-        console.log('loadScene', gltfFile, bbox)
         Vec3.set3(root._scale, 1 / maxSize, 1 / maxSize, 1 / maxSize);
         Vec3.set3(subRoot._position, -sceneCenter[0], -sceneCenter[1] + sceneSize[1]/2, -sceneCenter[2]);
 
