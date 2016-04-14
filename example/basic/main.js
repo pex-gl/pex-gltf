@@ -51,7 +51,8 @@ var MODELS = [
 Window.create({
     settings: {
         width: 1280,
-        height: 720
+        height: 720,
+        fullScreen: true
     },
     resources: {
         showColorsVert    : { glsl : glslify(__dirname + '/assets/glsl/ShowColors.vert')},
