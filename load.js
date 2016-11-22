@@ -248,6 +248,11 @@ function handleNode (ctx, json, basePath, nodeName, nodeInfo, callback) {
     json.nodes[childNodeName]._parent = nodeInfo
     return json.nodes[childNodeName]
   })
+  if (nodeInfo.meshes) {
+    nodeInfo.meshes = nodeInfo.meshes.map(function (meshNodeName) {
+      return json.meshes[meshNodeName]
+    })
+  }
   callback(null, nodeInfo)
 }
 
@@ -294,7 +299,7 @@ function load (file, callback) {
       function (callback) { handleAll('shaders', handleShader, ctx, json, basePath, callback) },
       function (callback) { handleAll('programs', handleProgram, ctx, json, basePath, callback) },
       function (callback) { handleAll('nodes', handleNode, ctx, json, basePath, callback) },
-      function (callback) { handleAll('scenes', handleScene, ctx, json, basePath, callback) },
+      function (callback) { handleAll('scenes', handleScene, ctx, json, basePath, callback) }
       // function (callback) { buildMeshes(ctx, json, callback) }
     ], function (err, results) {
       if (err) log('load done errors', err)
