@@ -65,7 +65,7 @@ function handleAccessor (ctx, json, basePath, accessorName, accessorInfo, callba
 }
 
 function linkPrimitive (json, primitiveName, primitiveInfo) {
-  log('handlePrimitive', primitiveName)
+  log('handlePrimitive', primitiveName, primitiveInfo.primitive)
   primitiveInfo.indices = json.accessors[primitiveInfo.indices]
   Object.keys(primitiveInfo.attributes).forEach(function (attribute) {
     primitiveInfo.attributes[attribute] = json.accessors[primitiveInfo.attributes[attribute]]

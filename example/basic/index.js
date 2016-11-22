@@ -25,7 +25,7 @@ const MODELS_DIR = (isBrowser ? '' : __dirname + '/') + 'assets/sampleModels'
 const models = [
   // MODELS_DIR + '/Buggy/glTF/Buggy.gltf',
   MODELS_DIR + '/Rambler/glTF/Rambler.gltf',
-  MODELS_DIR + '/Duck/glTF/Duck.gltf'
+  // MODELS_DIR + '/Duck/glTF/Duck.gltf'
 ]
 
 const AttributeSizeMap = {
@@ -88,6 +88,8 @@ const frag = glsl`
   }
 `
 const commandQueue = []
+const entities = []
+let drawCommand = null
 
 loadGlft(models[0], function (err, json) {
   if (err) {
@@ -129,7 +131,7 @@ loadGlft(models[0], function (err, json) {
       parent = parent._parent
     }
     const modelMatrix = parentStack.reduce(
-      (modelMatrix, m) => Mat4.mult(modelMatrix, m), Mat4.create()
+      (modelMatrix, m) => Mat4.mult(modelMatrix, m), Mat4.scale(Mat4.create(), [1, 1, 1])
     )
     meshIndex++
     // if (meshIndex > 50) {
@@ -141,17 +143,7 @@ loadGlft(models[0], function (err, json) {
       var size = AttributeSizeMap[accessorInfo.type]
       var data = new Float32Array(buffer.slice(accessorInfo.byteOffset, accessorInfo.byteOffset + accessorInfo.count * size * 4))
       const attributes = {
-        // aPosition: {
-          // buffer: regl.buffer({
-            // data: data,
-            // type: getReglConstant(primitive.attributes.POSITION.componentType)
-          // })
-        // }
         aPosition: {
-          // buffer: regl.buffer({
-            // data: primitive.attributes.POSITION.bufferView._buffer,
-            // type: getReglConstant(primitive.attributes.POSITION.componentType)
-          // }),
           buffer: primitive.attributes.POSITION.bufferView._reglBuffer,
           offset: primitive.attributes.POSITION.byteOffset,
           stride: primitive.attributes.POSITION.byteStride
@@ -173,21 +165,40 @@ loadGlft(models[0], function (err, json) {
       }
 
       size = AttributeSizeMap[primitive.indices.type]
-      const cmd = regl({
+      const entity = {
         attributes: attributes,
-        elements: primitive.indices.bufferView._reglElements,
-        vert: vert,
-        frag: frag,
-        uniforms: {
-          uProjectionMatrix: projectionMatrix,
-          uViewMatrix: viewMatrix,
-          uModelMatrix: modelMatrix
+        positions: {
+          buffer: primitive.attributes.POSITION.bufferView._reglBuffer,
+          offset: primitive.attributes.POSITION.byteOffset,
+          stride: primitive.attributes.POSITION.byteStride
         },
-        primitive: getReglConstant(primitive.primitive),
+        normals: {
+          buffer: normalAttrib.bufferView._reglBuffer,
+          offset: normalAttrib.byteOffset,
+          stride: normalAttrib.byteStride
+        },
+        elements: primitive.indices.bufferView._reglElements,
+        modelMatrix: modelMatrix,
+        primitive: getReglConstant(primitive.mode) || getReglConstant(primitive.primitive), // old spec
         count: primitive.indices.count,
         offset: primitive.indices.byteOffset / 2
-      })
-      commandQueue.push(cmd)
+      }
+      entities.push(entity)
+      // const cmd = regl({
+        // attributes: attributes,
+        // elements: primitive.indices.bufferView._reglElements,
+        // vert: vert,
+        // frag: frag,
+        // uniforms: {
+          // uProjectionMatrix: projectionMatrix,
+          // uViewMatrix: viewMatrix,
+          // uModelMatrix: modelMatrix
+        // },
+        // primitive: getReglConstant(primitive.mode) || getReglConstant(primitive.primitive), // old spec
+        // count: primitive.indices.count,
+        // offset: primitive.indices.byteOffset / 2
+      // })
+      // commandQueue.push(cmd)
     })
   }
 
@@ -198,7 +209,27 @@ loadGlft(models[0], function (err, json) {
     node.children.forEach(handleNode)
   }
 
+  drawCommand = regl({
+    attributes: {
+      aPosition: regl.prop('positions'),
+      aNormal: regl.prop('normals')
+    },
+    elements: regl.prop('elements'),
+    vert: vert,
+    frag: frag,
+    uniforms: {
+      uProjectionMatrix: projectionMatrix,
+      uViewMatrix: viewMatrix,
+      uModelMatrix: regl.prop('modelMatrix')
+    },
+    primitive: regl.prop('primitive'),
+    count: regl.prop('count'),
+    offset: regl.prop('offset')
+  })
+
+  console.time('init')
   json.scenes[json.scene].nodes.forEach(handleNode)
+  console.timeEnd('init')
   console.log(regl.stats)
 })
 
@@ -223,5 +254,10 @@ regl.frame(() => {
     depth: 1
   })
   // drawCube()
-  commandQueue.forEach((cmd) => cmd())
+  regl._gl.finish()
+  console.time('draw')
+  drawCommand(entities)
+  // commandQueue.forEach((cmd) => cmd())
+  regl._gl.finish()
+  console.timeEnd('draw')
 })
