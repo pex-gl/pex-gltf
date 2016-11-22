@@ -28,7 +28,7 @@ function handleBuffer (ctx, json, basePath, bufferName, bufferInfo, callback) {
   log('handleBuffer', bufferName, bufferInfo.uri)
   if (bufferInfo.uri) {
     loadBinary(basePath + '/' + bufferInfo.uri, function (err, data) {
-      bufferInfo.arrayBuffer = data // TODO: obj addon use _
+      bufferInfo._arrayBuffer = data // TODO: obj addon use _
       callback(err, data)
     })
   } else {
@@ -39,36 +39,36 @@ function handleBuffer (ctx, json, basePath, bufferName, bufferInfo, callback) {
 function handleBufferView (ctx, json, basePath, bufferViewName, bufferViewInfo, callback) {
   log('handleBufferView', bufferViewName)
   var buffer = json.buffers[bufferViewInfo.buffer]
-  bufferViewInfo._typedArray = null
+  // bufferViewInfo._typedArray = null
   if (bufferViewInfo.target === 34963) { // ELEMENT_ARRAY_BUFFER //TODO: ctx constant
     // TODO: Slice or not to slice the buffer
-    bufferViewInfo.buffer = buffer.arrayBuffer.slice(bufferViewInfo.byteOffset, bufferViewInfo.byteOffset + bufferViewInfo.byteLength) // ADDON
+    // TODO: replace _buffer with buffer or data if consistiend with other loaded objects
+    // FIXME: _buffer addon
+    bufferViewInfo._buffer = buffer._arrayBuffer.slice(bufferViewInfo.byteOffset, bufferViewInfo.byteOffset + bufferViewInfo.byteLength) // ADDON
     info('slice', bufferViewName, bufferViewInfo.byteOffset, bufferViewInfo.byteOffset + bufferViewInfo.byteLength, '=', bufferViewInfo.buffer.byteLength)
-    bufferViewInfo._buffer = bufferViewInfo.buffer
-    bufferViewInfo._typedArray = new Uint16Array(bufferViewInfo.buffer)
+    // bufferViewInfo._typedArray = new Uint16Array(bufferViewInfo._buffer) // TODO: is this ever used?
   }
   if (bufferViewInfo.target === 34962) { // ARRAY_BUFFER //TODO: ctx constant
     // TODO: Slice or not to slice the buffer
-    bufferViewInfo.buffer = buffer.arrayBuffer.slice(bufferViewInfo.byteOffset, bufferViewInfo.byteOffset + bufferViewInfo.byteLength)
+    bufferViewInfo._buffer = buffer._arrayBuffer.slice(bufferViewInfo.byteOffset, bufferViewInfo.byteOffset + bufferViewInfo.byteLength)
     info('slice', bufferViewName, bufferViewInfo.byteOffset, bufferViewInfo.byteOffset + bufferViewInfo.byteLength, '=', bufferViewInfo.buffer.byteLength)
-    // bufferViewInfo.buffer = buffer.arrayBuffer
-    bufferViewInfo._buffer = bufferViewInfo.buffer
-    bufferViewInfo._typedArray = new Float32Array(bufferViewInfo.buffer)
+    // bufferViewInfo._typedArray = new Float32Array(bufferViewInfo._buffer) // TODO: is this ever used?
   }
-  log('handleBufferView', bufferViewName, WebGLConstants[bufferViewInfo.target], bufferViewInfo.byteOffset, '..', bufferViewInfo.byteLength, '/', buffer.arrayBuffer.byteLength)
+  log('handleBufferView', bufferViewName, WebGLConstants[bufferViewInfo.target], bufferViewInfo.byteOffset, '..', bufferViewInfo.byteLength, '/', buffer._arrayBuffer.byteLength)
   callback(null, bufferViewInfo)
 }
 
 function handleAccessor (ctx, json, basePath, accessorName, accessorInfo, callback) {
   log('handleAccessor', accessorName)
+  accessorInfo.bufferView = json.bufferViews[accessorInfo.bufferView]
   callback(null, accessorInfo)
 }
 
 function linkPrimitive (json, primitiveName, primitiveInfo) {
   log('handlePrimitive', primitiveName)
-  primitiveInfo.indices.accessor = json.accessors[primitiveInfo.indices]
+  primitiveInfo.indices = json.accessors[primitiveInfo.indices]
   Object.keys(primitiveInfo.attributes).forEach(function (attribute) {
-    primitiveInfo.attributes[attribute].accessor = json.accessors[primitiveInfo.attributes[attribute]]
+    primitiveInfo.attributes[attribute] = json.accessors[primitiveInfo.attributes[attribute]]
   })
 }
 
@@ -100,7 +100,7 @@ function buildMeshes (ctx, json, callback) {
     var accessorInfo = json.accessors[accessorName]
     var size = AttributeSizeMap[accessorInfo.type]
     // TODO: any other way to limit attrib count?
-    var data = json.bufferViews[accessorInfo.bufferView]._typedArray// .subarray(0, accessorInfo.count * size)
+    var data = null // json.bufferViews[accessorInfo.bufferView]._typedArray// is this ever used? .subarray(0, accessorInfo.count * size)
     var buffer = json.bufferViews[accessorInfo.bufferView]._buffer
     if (buffer) {
       if (json.bufferViews[accessorInfo.bufferView].target === 34963) { // TODO: use ctx
@@ -182,7 +182,7 @@ function handleShader (ctx, json, basePath, shaderName, shaderInfo, callback) {
       // TODO: add error handling
       log('handleShader')
       // precision is already added in Program class
-      shaderInfo._src = srcStr.replace('precision highp float', '') // TODO: is it?
+      shaderInfo._src = srcStr.replace('precision highp float', '') // TODO: is it? // FIXME: shader._src addon
       callback(err, shaderInfo)
     })
   } else {
@@ -199,7 +199,7 @@ function handleImage (ctx, json, basePath, imageName, imageInfo, callback) {
         log('handleImage', err.toString())
         callback(err, null)
       } else {
-        imageInfo._img = img
+        imageInfo._img = img // FIXME: _img addon
         callback(null, img)
       }
     })
@@ -211,14 +211,15 @@ function handleImage (ctx, json, basePath, imageName, imageInfo, callback) {
 function handleTexture (ctx, json, basePath, textureName, textureInfo, callback) {
   log('handleTexture', textureInfo.source)
   if (textureInfo.source) {
-    var img = json.images[textureInfo.source]._img
-    var opts = {
-      magFilter: ctx.NEAREST,
-      minFilter: ctx.NEAREST,
-      repeat: true,
-      flipY: false
-    }
-    textureInfo._texture = ctx.createTexture2D(img, img.width, img.height, opts)
+    textureInfo.source = json.images[textureInfo.source]
+    // var img = json.images[textureInfo.source]._img
+    // var opts = {
+      // magFilter: ctx.NEAREST,
+      // minFilter: ctx.NEAREST,
+      // repeat: true,
+      // flipY: false
+    // }
+    // textureInfo._texture = ctx.createTexture2D(img, img.width, img.height, opts) // FIXME: _texture addon
     callback(null, textureInfo)
   } else {
     throw new Error('gltf/handleTexture missing uri in ' + JSON.stringify(textureInfo))
@@ -227,14 +228,16 @@ function handleTexture (ctx, json, basePath, textureName, textureInfo, callback)
 
 function handleProgram (ctx, json, basePath, programName, programInfo, callback) {
   log('handleProgram', programName)
-  var vertSrc = json.shaders[programInfo.vertexShader]._src
-  var fragSrc = json.shaders[programInfo.fragmentShader]._src
-  // FIXME: hardcoded
-  vertSrc = vertSrc.replace(/a_position/g, 'position')
-  vertSrc = vertSrc.replace(/a_normal/g, 'normal')
-  vertSrc = vertSrc.replace(/a_texcoord0/g, 'texcoord')
-  fragSrc = '#ifdef GL_ES\nprecision highp float\n#endif\n' + fragSrc
-  programInfo._program = ctx.createProgram(vertSrc, fragSrc)
+  programInfo.vertexShader = json.shaders[programInfo.vertexShader]
+  programInfo.fragmentShader = json.shaders[programInfo.fragmentShader]
+  // var vertSrc = json.shaders[programInfo.vertexShader]._src
+  // var fragSrc = json.shaders[programInfo.fragmentShader]._src
+  // // FIXME: hardcoded
+  // vertSrc = vertSrc.replace(/a_position/g, 'position')
+  // vertSrc = vertSrc.replace(/a_normal/g, 'normal')
+  // vertSrc = vertSrc.replace(/a_texcoord0/g, 'texcoord')
+  // fragSrc = '#ifdef GL_ES\nprecision highp float\n#endif\n' + fragSrc
+  // programInfo._program = ctx.createProgram(vertSrc, fragSrc) // FIXME: _program addon
   callback(null, programInfo)
 }
 
@@ -242,7 +245,7 @@ function handleNode (ctx, json, basePath, nodeName, nodeInfo, callback) {
   log('handleNode', nodeName)
   // FIXME: solve that with Ramda partial
   nodeInfo.children = nodeInfo.children.map(function (childNodeName) {
-    json.nodes[childNodeName].parent = nodeInfo
+    json.nodes[childNodeName]._parent = nodeInfo
     return json.nodes[childNodeName]
   })
   callback(null, nodeInfo)
@@ -272,8 +275,9 @@ function handleAll (typeName, handler, ctx, json, basePath, callback) {
   )
 }
 
-function load (ctx, file, callback) {
-  var basePath = path.dirname(file)
+function load (file, callback) {
+  const ctx = null // TODO: remove this, temporary while porting
+  const basePath = path.dirname(file)
   log('load ', file)
   loadJSON(file, function (err, json) {
     if (err) {
@@ -291,7 +295,7 @@ function load (ctx, file, callback) {
       function (callback) { handleAll('programs', handleProgram, ctx, json, basePath, callback) },
       function (callback) { handleAll('nodes', handleNode, ctx, json, basePath, callback) },
       function (callback) { handleAll('scenes', handleScene, ctx, json, basePath, callback) },
-      function (callback) { buildMeshes(ctx, json, callback) }
+      // function (callback) { buildMeshes(ctx, json, callback) }
     ], function (err, results) {
       if (err) log('load done errors', err)
       else log('load done')
