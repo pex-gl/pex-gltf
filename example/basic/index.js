@@ -13,6 +13,7 @@ const log = require('debug')('pex/app')
 const loadGlft = require('../../load')
 const isBrowser = require('is-browser')
 const lookup = require('gl-constants/lookup')
+const iterateObject = require('iterate-object')
 
 const cube = createCube()
 
@@ -37,7 +38,9 @@ const WebGLConstants = {
   1: 'lines',
   4: 'triangles',
   5123: 'uint16',         // 0x1403
-  5126: 'float'                   // 0x1406
+  5126: 'float',                  // 0x1406
+  34963: 'ELEMENT_ARRAY_BUFFER',  // 0x8893
+  34962: 'ARRAY_BUFFER'          // 0x8892
 }
 
 const getReglConstant = function (glConstant) {
@@ -94,6 +97,25 @@ loadGlft(models[0], function (err, json) {
       process.exit(0)
     }
   }
+
+  iterateObject(json.bufferViews, (bufferView) => {
+    if (WebGLConstants[bufferView.target] === 'ELEMENT_ARRAY_BUFFER') {
+      // FIXME: this is a dangerous assumption that every element buffer is SHORT_INT
+      // ok, we don't need to specify primitive here, it's just a default
+      bufferView._reglElements = regl.elements({
+        data: bufferView._buffer,
+        type: 'uint16'
+      })
+    } else if (WebGLConstants[bufferView.target] === 'ARRAY_BUFFER') {
+      console.log('bufferView buffer')
+      // FIXME: this is a dangerous assumption that every attribute is FLOAT
+      bufferView._reglBuffer = regl.buffer({
+        data: bufferView._buffer,
+        type: 'float'
+      })
+    }
+  })
+
   let meshIndex = 0
   function handleMesh (mesh, parentNode) {
     const parentStack = []
@@ -110,12 +132,10 @@ loadGlft(models[0], function (err, json) {
       (modelMatrix, m) => Mat4.mult(modelMatrix, m), Mat4.create()
     )
     meshIndex++
-    if (meshIndex > 150) {
-      return
-    }
+    // if (meshIndex > 50) {
+      // return
+    // }
     mesh.primitives.forEach((primitive, primitiveIndex) => {
-      console.log('meshIndex', meshIndex)
-
       var buffer = primitive.attributes.POSITION.bufferView._buffer
       var accessorInfo = primitive.attributes.POSITION
       var size = AttributeSizeMap[accessorInfo.type]
@@ -128,10 +148,11 @@ loadGlft(models[0], function (err, json) {
           // })
         // }
         aPosition: {
-          buffer: regl.buffer({
-            data: primitive.attributes.POSITION.bufferView._buffer,
-            type: getReglConstant(primitive.attributes.POSITION.componentType)
-          }),
+          // buffer: regl.buffer({
+            // data: primitive.attributes.POSITION.bufferView._buffer,
+            // type: getReglConstant(primitive.attributes.POSITION.componentType)
+          // }),
+          buffer: primitive.attributes.POSITION.bufferView._reglBuffer,
           offset: primitive.attributes.POSITION.byteOffset,
           stride: primitive.attributes.POSITION.byteStride
         }
@@ -146,10 +167,7 @@ loadGlft(models[0], function (err, json) {
       }
 
       attributes.aNormal = {
-        buffer: regl.buffer({
-          data: normalAttrib.bufferView._buffer,
-          type: getReglConstant(normalAttrib.componentType)
-        }),
+        buffer: normalAttrib.bufferView._reglBuffer,
         offset: normalAttrib.byteOffset,
         stride: normalAttrib.byteStride
       }
@@ -157,12 +175,7 @@ loadGlft(models[0], function (err, json) {
       size = AttributeSizeMap[primitive.indices.type]
       const cmd = regl({
         attributes: attributes,
-        elements: regl.elements({
-          data: primitive.indices.bufferView._buffer,
-          // data: new Uint16Array(primitive.indices.bufferView._buffer.slice(primitive.indices.byteOffset, primitive.indices.byteOffset + primitive.indices.count * size * 2 )),
-          primitive: getReglConstant(primitive.primitive),
-          type: getReglConstant(primitive.indices.componentType)
-        }),
+        elements: primitive.indices.bufferView._reglElements,
         vert: vert,
         frag: frag,
         uniforms: {
@@ -170,6 +183,7 @@ loadGlft(models[0], function (err, json) {
           uViewMatrix: viewMatrix,
           uModelMatrix: modelMatrix
         },
+        primitive: getReglConstant(primitive.primitive),
         count: primitive.indices.count,
         offset: primitive.indices.byteOffset / 2
       })
