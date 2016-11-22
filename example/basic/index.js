@@ -12,12 +12,12 @@ const glsl = require('glslify')
 const log = require('debug')('pex/app')
 const loadGlft = require('../../load')
 const isBrowser = require('is-browser')
+const lookup = require('gl-constants/lookup')
 
 const cube = createCube()
 
 const projectionMatrix = Mat4.perspective([], 60, 1280 / 720, 0.1, 100)
-const viewMatrix = Mat4.lookAt([], [3, 3, 3], [0, 0, 0], [0, 1, 0])
-const modelMatrix = Mat4.create()
+const viewMatrix = Mat4.lookAt([], [10, 10, 10], [0, 0, 0], [0, 1, 0])
 
 const MODELS_DIR = (isBrowser ? '' : __dirname + '/') + 'assets/sampleModels'
 
@@ -26,6 +26,28 @@ const models = [
   MODELS_DIR + '/Rambler/glTF/Rambler.gltf',
   MODELS_DIR + '/Duck/glTF/Duck.gltf'
 ]
+
+const AttributeSizeMap = {
+  "SCALAR": 1,
+  "VEC3": 3,
+  "VEC2": 2
+}
+
+const WebGLConstants = {
+  1: 'lines',
+  4: 'triangles',
+  5123: 'uint16',         // 0x1403
+  5126: 'float'                   // 0x1406
+}
+
+const getReglConstant = function (glConstant) {
+  if (WebGLConstants[glConstant]) {
+    return WebGLConstants[glConstant]
+  } else {
+    console.log('Unknown constant', glConstant, lookup(glConstant))
+    return null
+  }
+}
 
 const vert = glsl`
   #ifdef GL_ES
@@ -64,7 +86,7 @@ const frag = glsl`
 `
 const commandQueue = []
 
-loadGlft(models[0], function (err, scene) {
+loadGlft(models[0], function (err, json) {
   if (err) {
     log(err)
     log(err.stack)
@@ -72,20 +94,45 @@ loadGlft(models[0], function (err, scene) {
       process.exit(0)
     }
   }
-  var meshes = Object.keys(scene.meshes).map((id) => scene.meshes[id])
-  meshes.forEach((mesh, meshIndex) => {
+  let meshIndex = 0
+  function handleMesh (mesh, parentNode) {
+    const parentStack = []
+    let parent = parentNode
+    while (parent) {
+      if (parent.matrix) {
+        // we will process matrices in reverse order
+        // from parent to child
+        parentStack.unshift(parent.matrix) 
+      }
+      parent = parent._parent
+    }
+    const modelMatrix = parentStack.reduce(
+      (modelMatrix, m) => Mat4.mult(modelMatrix, m), Mat4.create()
+    )
+    meshIndex++
+    if (meshIndex > 150) {
+      return
+    }
     mesh.primitives.forEach((primitive, primitiveIndex) => {
       console.log('meshIndex', meshIndex)
-      if (meshIndex > 30) {
-        return
-      }
+
+      var buffer = primitive.attributes.POSITION.bufferView._buffer
+      var accessorInfo = primitive.attributes.POSITION
+      var size = AttributeSizeMap[accessorInfo.type]
+      var data = new Float32Array(buffer.slice(accessorInfo.byteOffset, accessorInfo.byteOffset + accessorInfo.count * size * 4))
       const attributes = {
+        // aPosition: {
+          // buffer: regl.buffer({
+            // data: data,
+            // type: getReglConstant(primitive.attributes.POSITION.componentType)
+          // })
+        // }
         aPosition: {
           buffer: regl.buffer({
             data: primitive.attributes.POSITION.bufferView._buffer,
-            type: 'float' // FIXME: guessed
+            type: getReglConstant(primitive.attributes.POSITION.componentType)
           }),
-          offset: primitive.attributes.POSITION.byteOffset * 0,
+          offset: primitive.attributes.POSITION.byteOffset,
           stride: primitive.attributes.POSITION.byteStride
         }
       }
@@ -101,18 +148,20 @@ loadGlft(models[0], function (err, scene) {
       attributes.aNormal = {
         buffer: regl.buffer({
           data: normalAttrib.bufferView._buffer,
-          type: 'float'// FIXME: guessed
+          type: getReglConstant(normalAttrib.componentType)
         }),
-        offset: normalAttrib.byteOffset * 0,
+        offset: normalAttrib.byteOffset,
         stride: normalAttrib.byteStride
       }
 
+      size = AttributeSizeMap[primitive.indices.type]
       const cmd = regl({
         attributes: attributes,
         elements: regl.elements({
           data: primitive.indices.bufferView._buffer,
-          primitive: 'triangle strip',
-          type: 'uint16'// FIXME: guessed
+          // data: new Uint16Array(primitive.indices.bufferView._buffer.slice(primitive.indices.byteOffset, primitive.indices.byteOffset + primitive.indices.count * size * 2 )),
+          primitive: getReglConstant(primitive.primitive),
+          type: getReglConstant(primitive.indices.componentType)
         }),
         vert: vert,
         frag: frag,
@@ -120,11 +169,23 @@ loadGlft(models[0], function (err, scene) {
           uProjectionMatrix: projectionMatrix,
           uViewMatrix: viewMatrix,
           uModelMatrix: modelMatrix
-        }
+        },
+        count: primitive.indices.count,
+        offset: primitive.indices.byteOffset / 2
       })
       commandQueue.push(cmd)
     })
-  })
+  }
+
+  function handleNode (node) {
+    if (node.meshes) {
+      node.meshes.forEach((mesh) => handleMesh(mesh, node))
+    }
+    node.children.forEach(handleNode)
+  }
+
+  json.scenes[json.scene].nodes.forEach(handleNode)
+  console.log(regl.stats)
 })
 
 const drawCube = regl({
@@ -138,7 +199,7 @@ const drawCube = regl({
   uniforms: {
     uProjectionMatrix: projectionMatrix,
     uViewMatrix: viewMatrix,
-    uModelMatrix: modelMatrix
+    uModelMatrix: Mat4.create()
   }
 })
 
